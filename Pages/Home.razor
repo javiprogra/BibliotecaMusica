@@ -53,10 +53,10 @@
 
     <div class="container text-center">
         <div class="row mt-3">
-            <h2>Albúm:</h2>
+            <h2>Álbum:</h2>
             <div class="col">
                 <p>
-                    <label for="identifier" class="form-label">Nombre de la canción: </label>
+                    <label for="identifier" class="form-label">Nombre del albúm: </label>
                     <InputText id="identifier" class="form-control" @bind-Value="album.tituloAlbum" />
                     <ValidationMessage For="() => album.tituloAlbum" />
                 </p>
@@ -68,7 +68,7 @@
                 </p>
 
                 <p>
-                    <label for="productionDate">Fecha de publicacióno: </label>
+                    <label for="productionDate">Fecha de publicación: </label>
                     <InputDate id="productionDate" class="form-control" @bind-Value="album.fechaPublicacion" />
                     <ValidationMessage For="() => album.fechaPublicacion" />
                 </p>
@@ -91,20 +91,31 @@
                         }
                     }
                 </div>
+                        
+                @foreach (var a in albumes)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>@a.tituloAlbum</strong> - @a.artistaAlbum (@a.fechaPublicacion.ToShortDateString())
+                        </span>
+                        <div>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => EditarAlbum(a)">Editar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarAlbum(a)">Eliminar</button>
+                        </div>
+                    </li>
+                }   
 
-                
-
-                
-
-
-            </div>
-
+                @if (albumEditado != null)
+                {
+                    <button class="btn btn-warning mt-2" @onclick="CancelarEdicion">Cancelar edición</button>
+                }
+             </div>
         </div>
     </div>
     <p>
         <div class="row text-center mt-3">
             <div class="col">
-                <button class="btn btn-secondary" type="submit">Guardar canción</button>
+                <button class="btn btn-secondary" type="submit">Guardar álbum</button>
             </div>
         </div>
     </p>
@@ -119,6 +130,8 @@
 
     private List<Cancion> cancionesDisponibles = new List<Cancion>();
     private HashSet<Cancion> cancionesSeleccionadas = new(); // Las que el usuario elige
+
+    private Album albumEditado = null;
 
     private void GuardarCancion()
     {
@@ -136,10 +149,30 @@
 
     private void GuardarAlbum()
     {
+        album.canciones = cancionesSeleccionadas.ToList();
+
+        // Cargar álbumes guardados
         albumes = localStorage.GetItem<List<Album>>("albumes") ?? new List<Album>();
 
-        album.canciones = cancionesSeleccionadas.ToList();
-        albumes.Add(album);
+        if (albumEditado != null)
+        {
+            // reemplaza el álbum viejo por el nuevo
+            var index = albumes.FindIndex(x => x.Id == albumEditado.Id);
+            if (index != -1)
+            {
+                albumes[index] = album;
+            }
+
+            albumEditado = null;
+        }
+        else
+        {
+            // NUEVO
+            album.Id = Guid.NewGuid();
+            albumes.Add(album);
+        }
+
+        // Guardar
         localStorage.SetItem("albumes", albumes);
 
         // Reset
@@ -147,10 +180,26 @@
         cancionesSeleccionadas.Clear();
     }
 
-    protected override void OnInitialized()
+    private void EditarAlbum(Album a)
     {
-        // Cargar canciones previamente guardadas
-        cancionesDisponibles = localStorage.GetItem<List<Cancion>>("canciones") ?? new List<Cancion>();
+        album = new Album
+        {
+            Id = a.Id,
+            tituloAlbum = a.tituloAlbum,
+            artistaAlbum = a.artistaAlbum,
+            fechaPublicacion = a.fechaPublicacion,
+            canciones = new List<Cancion>(a.canciones)
+        };
+
+        cancionesSeleccionadas = new HashSet<Cancion>(a.canciones);
+        albumEditado = a; //referencia al álbum original que se está editando
+    }
+
+    private void CancelarEdicion()
+    {
+        album = new Album();
+        cancionesSeleccionadas.Clear();
+        albumEditado = null;
     }
 
     private void SeleccionarCancion(object checkedValue, Cancion cancion)
@@ -162,4 +211,25 @@
         else
             cancionesSeleccionadas.Remove(cancion);
     }
+
+    private void EliminarAlbum(Album a)
+    {
+        albumes.Remove(a);
+        localStorage.SetItem("albumes", albumes);
+
+        // Si se estaba editando este álbum, reiniciar el formulario
+        if (albumEditado == a)
+        {
+            album = new Album();
+            cancionesSeleccionadas.Clear();
+            albumEditado = null;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //Cargar canciones y albumes guardados
+        cancionesDisponibles = localStorage.GetItem<List<Cancion>>("canciones") ?? new List<Cancion>();
+        albumes = localStorage.GetItem<List<Album>>("albumes") ?? new List<Album>();
+    } 
 }

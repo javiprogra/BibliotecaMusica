@@ -1,35 +1,40 @@
 ﻿@page "/weather"
+
+@using Models;
 @inject HttpClient Http
 
-<PageTitle>Weather</PageTitle>
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
 
-<h1>Weather</h1>
+<PageTitle>Álbumes</PageTitle>
 
-<p>This component demonstrates fetching data from the server.</p>
+<h1>Starships</h1>
 
-@if (forecasts == null)
+<p>Estos son los álbumes que se han guardado.</p>
+
+@if (albumes == null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Cargando...</em></p>
 }
 else
 {
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
+                <th>Titulo</th>
+                <th>Artista</th>
+                <th>Canciones</th>
+                <th>Fecha de publicación</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var forecast in forecasts)
+            @foreach (var album in albumes)
             {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@album.tituloAlbum</td>
+                    <td>@album.artistaAlbum</td>
+                    <td>@string.Join(", ", album.canciones.Select(c => $"{c.nombre} ({c.duracion})"))</td>
+                    <td>@album.fechaPublicacion.ToShortDateString()</td>
+                    
                 </tr>
             }
         </tbody>
@@ -37,21 +42,17 @@ else
 }
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private List<Album> albumes = new List<Album>();
 
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
-    }
+        // Recuperar la lista de starships desde LocalStorage a una variable var
+        var savedStarships = localStorage.GetItem<List<Album>>("albumes");
 
-    public class WeatherForecast
-    {
-        public DateOnly Date { get; set; }
-
-        public int TemperatureC { get; set; }
-
-        public string? Summary { get; set; }
-
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+        // Validar si la lista fue recuperada correctamente, copiarla a la lista
+        if (savedStarships != null)
+        {
+            albumes = savedStarships;
+        }
     }
 }
